@@ -1,0 +1,58 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import { SITE } from '@/lib/site';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const featured = posts[0];
+const rest = posts.slice(1, 7);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE.title,
+  url: SITE.url,
+  description: SITE.description,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${SITE.url}/blog?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
+};
+---
+
+<BaseLayout title={SITE.title} description={SITE.description} jsonLd={jsonLd}>
+  <section class="border-b border-neutral-200 bg-neutral-50 py-16 dark:border-neutral-800 dark:bg-neutral-900">
+    <div class="container-wide">
+      <h1 class="max-w-2xl font-serif text-4xl font-bold leading-tight sm:text-5xl">
+        {SITE.tagline}
+      </h1>
+      <p class="mt-4 max-w-xl text-lg text-neutral-600 dark:text-neutral-400">{SITE.description}</p>
+    </div>
+  </section>
+
+  {featured && (
+    <section class="container-wide py-12">
+      <h2 class="mb-6 text-sm font-semibold uppercase tracking-wide text-neutral-500">Latest Feature</h2>
+      <ArticleCard post={featured} />
+    </section>
+  )}
+
+  {rest.length > 0 && (
+    <section class="container-wide pb-16">
+      <div class="mb-6 flex items-center justify-between">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-neutral-500">Recent Articles</h2>
+        <a href="/blog" class="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">
+          View all &rarr;
+        </a>
+      </div>
+      <div class="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+        {rest.map((post) => <ArticleCard post={post} />)}
+      </div>
+    </section>
+  )}
+</BaseLayout>
