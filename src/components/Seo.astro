@@ -11,6 +11,7 @@ interface Props {
   modifiedTime?: Date;
   author?: string;
   jsonLd?: Record<string, unknown>;
+  noindex?: boolean;
 }
 
 const {
@@ -23,6 +24,7 @@ const {
   modifiedTime,
   author,
   jsonLd,
+  noindex = false,
 } = Astro.props;
 
 const canonical = canonicalUrl ?? new URL(Astro.url.pathname, SITE.url).toString();
@@ -33,6 +35,7 @@ const pageTitle = title === SITE.title ? title : `${title} | ${SITE.title}`;
 <title>{pageTitle}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
 
 <meta property="og:type" content={type} />
 <meta property="og:title" content={title} />

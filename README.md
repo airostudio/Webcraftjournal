@@ -19,6 +19,14 @@ npm run build     # type-check + static build to dist/
 npm run preview   # preview the production build
 ```
 
+## Setup
+
+Copy `.env.example` to `.env` and set a password for the admin upload page:
+
+```bash
+cp .env.example .env
+```
+
 ## Publishing an article
 
 ### Write Markdown directly
@@ -53,6 +61,12 @@ The script (`scripts/ingest-doc.ts`):
 3. Scans the body for target anchor keywords (e.g. "web design", "modern web architecture", "AI web tools", "frontend development") and links the first match to `https://webese.ai`.
 4. If no keyword is found, appends a stylized editorial byline card crediting Webese AI at the end of the article.
 5. Writes the finished Markdown file to `src/content/blog/<slug>.md`.
+
+### Admin upload page (local/dev only)
+
+Visit `/admin` while running `npm run dev` for a browser-based upload form: pick a `.docx`/`.md`/`.mdx` file, choose a category from the dropdown, optionally add tags/author, and submit. It's gated by the `ADMIN_UPLOAD_PASSWORD` you set in `.env` and posts to `POST /api/admin/upload` (`src/pages/api/admin/upload.ts`), which runs the same ingestion logic as the CLI (shared in `src/lib/ingest.ts`) and writes the post straight into `src/content/blog/`. The dev server picks it up immediately — no restart needed.
+
+This page and its API route are the only parts of the site that run on a server (`output: 'hybrid'` with the `@astrojs/node` adapter in `astro.config.mjs`); everything else is still fully static. The page is excluded from `robots.txt` and marked `noindex`. It is intended for local use — it writes directly to the filesystem, which most static hosts (Vercel/Netlify serverless, etc.) won't persist, and the password check is a single shared secret with no session/rate-limiting, so don't expose it on the open internet as-is.
 
 ### Automatic backlink guarantee
 
