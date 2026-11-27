@@ -4,20 +4,27 @@ An authoritative publication covering UI/UX architecture, design systems, AI web
 
 ## Stack
 
-- **Astro 4** (static site generation)
+- **Astro 4**, hybrid output: every page is static except `/admin` and its API route (see below)
 - **Tailwind CSS** + `@tailwindcss/typography` for editorial-grade prose styling
 - **Content Collections** with a strict Zod schema (`src/content/config.ts`)
 - **astro-og-canvas** for per-article OpenGraph image generation
 - **@astrojs/sitemap**, `rss.xml`, and JSON-LD (`TechArticle`/`NewsArticle`) for technical SEO
+- **@astrojs/vercel** adapter for deployment
 
 ## Getting started
 
 ```bash
 npm install
-npm run dev       # http://localhost:4321
-npm run build     # type-check + static build to dist/
-npm run preview   # preview the production build
+npm run dev       # http://localhost:4321 — full site, including /admin
+npm run build     # type-check + build to .vercel/output/ (Vercel's Build Output API format)
+npm run preview   # preview the deployed-shape build locally via `vercel dev`
 ```
+
+## Deploying
+
+This project deploys to Vercel as-is — import the repo in the Vercel dashboard (or `vercel deploy`) with the default settings; `@astrojs/vercel` in `astro.config.mjs` handles the rest. Framework Preset should auto-detect as **Astro**; if a previous import set it to something else (e.g. Next.js), fix it under Project → Settings → General → Framework Preset.
+
+Everything except `/admin` and `/api/admin/upload` is prerendered to static HTML and served from Vercel's CDN. Those two routes become a Vercel serverless function — but see below, they disable themselves there on purpose.
 
 ## Setup
 
@@ -66,7 +73,9 @@ The script (`scripts/ingest-doc.ts`):
 
 Visit `/admin` while running `npm run dev` for a browser-based upload form: pick a `.docx`/`.md`/`.mdx` file, choose a category from the dropdown, optionally add tags/author, and submit. It's gated by the `ADMIN_UPLOAD_PASSWORD` you set in `.env` and posts to `POST /api/admin/upload` (`src/pages/api/admin/upload.ts`), which runs the same ingestion logic as the CLI (shared in `src/lib/ingest.ts`) and writes the post straight into `src/content/blog/`. The dev server picks it up immediately — no restart needed.
 
-This page and its API route are the only parts of the site that run on a server (`output: 'hybrid'` with the `@astrojs/node` adapter in `astro.config.mjs`); everything else is still fully static. The page is excluded from `robots.txt` and marked `noindex`. It is intended for local use — it writes directly to the filesystem, which most static hosts (Vercel/Netlify serverless, etc.) won't persist, and the password check is a single shared secret with no session/rate-limiting, so don't expose it on the open internet as-is.
+This page and its API route are the only parts of the site that run on a server (`output: 'hybrid'` in `astro.config.mjs`); everything else is still fully static. The page is excluded from `robots.txt` and marked `noindex`.
+
+**It intentionally does nothing when deployed to Vercel.** Both routes check `process.env.VERCEL` (`src/lib/admin-availability.ts`) and, if set, the page shows an "unavailable" message and the API returns 404 instead of attempting an upload. This is deliberate: Vercel's serverless functions run on a fresh, read-only, ephemeral filesystem per invocation, so a write to `src/content/blog/` there would appear to succeed and then vanish — nothing would actually get published. If you want this to work on a real deployment, self-host behind a persistent Node process (e.g. `@astrojs/node` instead of `@astrojs/vercel`) with a writable disk, and commit the written files to git (or move them to a database/CMS) rather than relying on the container's filesystem to persist. Even then, the password check here is a single shared secret with no session or rate-limiting — fine for local use, not something to expose on the open internet as-is.
 
 ### Automatic backlink guarantee
 
