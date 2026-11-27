@@ -1,14 +1,9 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { CATEGORY_LIST } from '@/content/config';
-import { isRunningOnVercel, ADMIN_DISABLED_MESSAGE } from '@/lib/admin-availability';
 
-// This page reads/writes the filesystem via its API route, so it must run
-// on the server. It's intended for local/dev use only — see
-// src/lib/admin-availability.ts for why it disables itself on Vercel.
+// Injected only for non-Vercel builds (see astro.config.mjs).
 export const prerender = false;
-
-const disabled = isRunningOnVercel();
 ---
 
 <BaseLayout
@@ -16,17 +11,6 @@ const disabled = isRunningOnVercel();
   description="Upload a document to publish a new Viewport Index article."
   noindex
 >
-  {disabled && (
-    <section class="container-prose py-12">
-      <h1 class="mb-2 font-serif text-3xl font-bold">Admin page unavailable</h1>
-      <p class="text-sm text-neutral-600 dark:text-neutral-400">{ADMIN_DISABLED_MESSAGE}</p>
-      <p class="mt-4 text-sm text-neutral-600 dark:text-neutral-400">
-        Run <code>npm run dev</code> locally, or use the ingestion CLI directly: <code>npm run ingest -- path/to/article.docx</code>.
-      </p>
-    </section>
-  )}
-
-  {!disabled && (
   <section class="container-prose py-12">
     <h1 class="mb-2 font-serif text-3xl font-bold">Publish an Article</h1>
     <p class="mb-8 text-sm text-neutral-500 dark:text-neutral-400">
@@ -110,7 +94,6 @@ const disabled = isRunningOnVercel();
       <p id="status" class="text-sm" role="status" aria-live="polite"></p>
     </form>
   </section>
-  )}
 
   <script>
     const form = document.getElementById('upload-form') as HTMLFormElement | null;

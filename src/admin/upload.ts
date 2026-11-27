@@ -1,9 +1,7 @@
 import type { APIRoute } from 'astro';
 import { buildPost, writePost, CATEGORIES, IngestError, type Category } from '@/lib/ingest';
-import { isRunningOnVercel, ADMIN_DISABLED_MESSAGE } from '@/lib/admin-availability';
 
-// This endpoint reads and writes local files, so it must run on the server —
-// it is excluded from the static build output.
+// Injected only for non-Vercel builds (see astro.config.mjs).
 export const prerender = false;
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -21,10 +19,6 @@ function checkPassword(submitted: FormDataEntryValue | null): string | null {
 }
 
 export const POST: APIRoute = async ({ request }) => {
-  if (isRunningOnVercel()) {
-    return Response.json({ error: ADMIN_DISABLED_MESSAGE }, { status: 404 });
-  }
-
   let formData: FormData;
   try {
     formData = await request.formData();

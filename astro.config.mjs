@@ -1,27 +1,38 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
-import vercel from '@astrojs/vercel/serverless';
+import node from '@astrojs/node';
 import { remarkBacklinkInjector } from './src/lib/remark-backlink-injector.mjs';
 
 const SITE_URL = 'https://viewportindex.com';
 
+// The /admin upload tool writes to the local filesystem, so it only exists
+// off Vercel. Vercel builds (VERCEL=1) ship a plain static site with no
+// serverless functions, which avoids Vercel's Node runtime requirements.
+const includeAdmin = !process.env.VERCEL;
+
+function adminRoutes() {
+  return {
+    name: 'viewport-admin-routes',
+    hooks: {
+      'astro:config:setup': ({ injectRoute }) => {
+        injectRoute({ pattern: '/admin', entrypoint: './src/admin/AdminPage.astro' });
+        injectRoute({ pattern: '/api/admin/upload', entrypoint: './src/admin/upload.ts' });
+      },
+    },
+  };
+}
+
 export default defineConfig({
   site: SITE_URL,
-  // Hybrid: every page is static/prerendered by default (fast, cheap to host)
-  // except the admin upload page and its API route, which opt out via
-  // `export const prerender = false`. Those two routes become Vercel
-  // serverless functions; everything else ships as static files. The admin
-  // route disables itself at runtime when deployed to Vercel (see
-  // src/lib/admin-availability.ts) since its filesystem writes won't persist
-  // there — it's a local/dev-only tool.
-  output: 'hybrid',
-  adapter: vercel(),
+  output: includeAdmin ? 'hybrid' : 'static',
+  adapter: includeAdmin ? node({ mode: 'standalone' }) : undefined,
   integrations: [
     tailwind({
       applyBaseStyles: false,
     }),
-    sitemap(),
+    sitemap({ filter: (page) => !page.includes('/admin') }),
+    ...(includeAdmin ? [adminRoutes()] : []),
   ],
   markdown: {
     remarkPlugins: [remarkBacklinkInjector],
